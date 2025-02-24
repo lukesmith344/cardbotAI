@@ -1,50 +1,51 @@
 'use client';
 import { useState } from 'react';
-import { createUser, checkUserIdExists, checkEmailExists } from '@/firebase/users';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '@/firebase/config';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { doc, setDoc } from 'firebase/firestore';
 
-export default function Home() {
-  const router = useRouter();
-  const [userId, setUserId] = useState('');
+const Signup = () => {
   const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      // Check if userId or email already exists
-      const [userIdExists, emailExists] = await Promise.all([
-        checkUserIdExists(userId),
-        checkEmailExists(email)
-      ]);
+      // Create the user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      if (userIdExists) {
-        setError('User ID already taken');
-        return;
-      }
+      // Store additional user data in Firestore using the Firebase Auth UID as the document ID
+      await setDoc(doc(db, 'users', uid), {
+        email: email,
+        userId: userId,
+        firebaseUid: uid,
+        createdAt: new Date().toISOString()
+      });
 
-      if (emailExists) {
-        setError('Email already registered');
-        return;
-      }
+      console.log('User created:', {
+        uid: uid,
+        email: email,
+        userId: userId
+      });
 
-      // Create the user
-      await createUser(userId, email, password);
-      
-      // Redirect to dashboard or show success message
-      router.push('/dashboard');
-    } catch (error) {
-      setError('Error creating account. Please try again.');
-      console.error('Sign up error:', error);
+      router.push('/login');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setError(error.message || 'Failed to sign up. Please try again.');
     }
   };
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Left side - Sign up section */}
+      {/* Left side - Signup section */}
       <div className="w-1/2 bg-[#7091E6] p-12 flex flex-col items-center pt-[12rem]">
         <div className="w-full max-w-md">
           <h1 className="text-5xl font-lato font-bold text-white mb-16 flex items-center gap-2 pl-16">
@@ -58,23 +59,15 @@ export default function Home() {
             </svg>
           </h1>
 
-          <h2 className="text-3xl font-lato font-bold text-white mb-12">
-            Create a free account now
+          <h2 className="text-3xl font-lato font-bold text-white mb-12 flex items-center gap-2">
+            Create your account! 👋
           </h2>
           
-          <form onSubmit={handleSubmit} className="flex flex-col gap-12">
+          <form onSubmit={handleSignup} className="flex flex-col gap-12">
             {error && <p className="text-red-500 text-center bg-white px-4 py-2 rounded">{error}</p>}
             
             <input 
-              type="text" 
-              placeholder="User ID"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#7091E6] bg-white text-black"
-              required
-            />
-            <input 
-              type="email" 
+              type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -82,8 +75,16 @@ export default function Home() {
               required
             />
             <input 
-              type="password" 
-              placeholder="Password"
+              type="text"
+              placeholder="Choose a User ID (e.g., lukes34)"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#7091E6] bg-white text-black"
+              required
+            />
+            <input 
+              type="password"
+              placeholder="Choose a Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#7091E6] bg-white text-black"
@@ -93,10 +94,10 @@ export default function Home() {
               type="submit"
               className="mt-8 bg-white text-[#7091E6] px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-colors"
             >
-              Create Account
+              Sign Up
             </button>
             <p className="text-white text-center">
-              Already have an account? <a href="/login" className="underline hover:opacity-80 cursor-pointer">Log In</a>
+              Already have an account? <Link href="/login" className="underline hover:opacity-80 cursor-pointer">Log In</Link>
             </p>
           </form>
         </div>
@@ -153,4 +154,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Signup; 

@@ -1,50 +1,32 @@
 'use client';
 import { useState } from 'react';
-import { createUser, checkUserIdExists, checkEmailExists } from '@/firebase/users';
+import { loginWithUserId } from '@/firebase/auth';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function Home() {
-  const router = useRouter();
+const Login = () => {
   const [userId, setUserId] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      // Check if userId or email already exists
-      const [userIdExists, emailExists] = await Promise.all([
-        checkUserIdExists(userId),
-        checkEmailExists(email)
-      ]);
-
-      if (userIdExists) {
-        setError('User ID already taken');
-        return;
-      }
-
-      if (emailExists) {
-        setError('Email already registered');
-        return;
-      }
-
-      // Create the user
-      await createUser(userId, email, password);
-      
-      // Redirect to dashboard or show success message
+      const user = await loginWithUserId(userId, password);
+      console.log('Login successful:', user);
       router.push('/dashboard');
-    } catch (error) {
-      setError('Error creating account. Please try again.');
-      console.error('Sign up error:', error);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError('Failed to log in. Please check your credentials.');
     }
   };
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Left side - Sign up section */}
+      {/* Left side - Login section */}
       <div className="w-1/2 bg-[#7091E6] p-12 flex flex-col items-center pt-[12rem]">
         <div className="w-full max-w-md">
           <h1 className="text-5xl font-lato font-bold text-white mb-16 flex items-center gap-2 pl-16">
@@ -58,31 +40,23 @@ export default function Home() {
             </svg>
           </h1>
 
-          <h2 className="text-3xl font-lato font-bold text-white mb-12">
-            Create a free account now
+          <h2 className="text-3xl font-lato font-bold text-white mb-12 flex items-center gap-2">
+            Hi there, welcome back! 👋
           </h2>
           
-          <form onSubmit={handleSubmit} className="flex flex-col gap-12">
+          <form onSubmit={handleLogin} className="flex flex-col gap-12">
             {error && <p className="text-red-500 text-center bg-white px-4 py-2 rounded">{error}</p>}
             
             <input 
-              type="text" 
-              placeholder="User ID"
+              type="text"
+              placeholder="User ID (e.g., lukes34)"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#7091E6] bg-white text-black"
               required
             />
             <input 
-              type="email" 
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#7091E6] bg-white text-black"
-              required
-            />
-            <input 
-              type="password" 
+              type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -93,10 +67,10 @@ export default function Home() {
               type="submit"
               className="mt-8 bg-white text-[#7091E6] px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-colors"
             >
-              Create Account
+              Log In
             </button>
             <p className="text-white text-center">
-              Already have an account? <a href="/login" className="underline hover:opacity-80 cursor-pointer">Log In</a>
+              Don't have an account? <Link href="/signup" className="underline hover:opacity-80 cursor-pointer">Sign Up</Link>
             </p>
           </form>
         </div>
@@ -153,4 +127,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Login; 
